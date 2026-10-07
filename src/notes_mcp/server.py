@@ -8,31 +8,7 @@ from pathlib import Path
 
 from mcp.server.mcpserver import MCPServer
 
-from notes_mcp.db import (
-    create_note as db_create_note,
-)
-from notes_mcp.db import (
-    delete_note as db_delete_note,
-)
-from notes_mcp.db import (
-    get_connection,
-    init_db,
-)
-from notes_mcp.db import (
-    get_note as db_get_note,
-)
-from notes_mcp.db import (
-    list_recent_notes as db_list_recent_notes,
-)
-from notes_mcp.db import (
-    list_tags as db_list_tags,
-)
-from notes_mcp.db import (
-    search_notes as db_search_notes,
-)
-from notes_mcp.db import (
-    update_note as db_update_note,
-)
+from notes_mcp import db
 
 # Alias MCPServer as FastMCP for compatibility
 FastMCP = MCPServer
@@ -41,7 +17,7 @@ FastMCP = MCPServer
 @contextmanager
 def db_session(db_path: str | Path) -> Generator[sqlite3.Connection, None, None]:
     """Context manager to yield a db connection and guarantee it is closed."""
-    conn = get_connection(db_path)
+    conn = db.get_connection(db_path)
     try:
         yield conn
     finally:
@@ -95,7 +71,7 @@ def validate_tags(tags: list[str] | None) -> str | None:
 
 def create_mcp(db_path: str | Path) -> FastMCP:
     """Create and configure the FastMCP server with tools, resources, and prompts."""
-    init_db(db_path)
+    db.init_db(db_path)
 
     mcp = FastMCP(
         name="notes",
@@ -129,7 +105,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
             return {"error": err}
 
         with db_session(db_path) as conn:
-            return db_create_note(conn, title=title.strip(), content=content, tags=tags or [])
+            return db.create_note(conn, title=title.strip(), content=content, tags=tags or [])
 
     @mcp.tool()
     def get_note(note_id: int) -> dict:
@@ -142,7 +118,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
             The full note dictionary, or an error if not found.
         """
         with db_session(db_path) as conn:
-            note = db_get_note(conn, note_id)
+            note = db.get_note(conn, note_id)
         if note is None:
             return {"error": f"Note {note_id} not found"}
         return note
@@ -163,7 +139,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
 
         clamped = clamp_limit(limit)
         with db_session(db_path) as conn:
-            results = db_search_notes(conn, query=query.strip(), limit=clamped)
+            results = db.search_notes(conn, query=query.strip(), limit=clamped)
         return [to_preview_note(n) for n in results]
 
     @mcp.tool()
@@ -178,7 +154,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
         """
         clamped = clamp_limit(limit)
         with db_session(db_path) as conn:
-            results = db_list_recent_notes(conn, limit=clamped)
+            results = db.list_recent_notes(conn, limit=clamped)
         return [to_preview_note(n) for n in results]
 
     @mcp.tool()
@@ -219,7 +195,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
                 return {"error": err}
 
         with db_session(db_path) as conn:
-            updated = db_update_note(
+            updated = db.update_note(
                 conn,
                 note_id=note_id,
                 title=title,
@@ -241,7 +217,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
             Status confirmation or an error dictionary.
         """
         with db_session(db_path) as conn:
-            deleted = db_delete_note(conn, note_id)
+            deleted = db.delete_note(conn, note_id)
         if not deleted:
             return {"error": f"Note {note_id} not found"}
         return {"status": "deleted", "note_id": note_id}
@@ -250,7 +226,7 @@ def create_mcp(db_path: str | Path) -> FastMCP:
     def tags_resource() -> str:
         """Resource returning all distinct tags with note counts."""
         with db_session(db_path) as conn:
-            tags = db_list_tags(conn)
+            tags = db.list_tags(conn)
         return json.dumps(tags, indent=2)
 
     @mcp.prompt("summarize_recent_notes")
