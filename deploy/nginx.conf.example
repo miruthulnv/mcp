@@ -1,0 +1,71 @@
+# Example Nginx reverse proxy configuration for Notes MCP Server
+# Place this configuration in /etc/nginx/sites-available/ and link to /etc/nginx/sites-enabled/
+# or include it inside the http { ... } block of /etc/nginx/nginx.conf
+
+# Rate limiting zone: 10MB memory zone tracking client IPs, allowing 30 requests/minute
+limit_req_zone $binary_remote_addr zone=mcp_limit:10m rate=30r/m;
+
+# Port 80 - Redirect all plaintext HTTP traffic to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name mcp.example.com;
+
+    # 301 Permanent Redirect to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+# Port 443 - SSL Termination & Reverse Proxy
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name mcp.example.com;
+
+    # SSL Certificate Paths (Let's Encrypt / Certbot standard layout)
+    ssl_certificate /etc/letsencrypt/live/mcp.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mcp.example.com/privkey.pem;
+
+    # Modern TLS Security Protocols & Ciphers
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    # Streamable HTTP MCP Endpoint
+    location /mcp {
+        # Rate limit to protect against brute-force or abuse (burst allowance of 10)
+        limit_req zone=mcp_limit burst=10 nodelay;
+
+        # Forward requests to Notes MCP container on localhost
+        proxy_pass http://127.0.0.1:3000/mcp;
+
+        # HTTP 1.1 is required for persistent streaming connections
+        proxy_http_version 1.1;
+
+        # Clear Connection header to allow HTTP/1.1 keep-alive
+        proxy_set_header Connection "";
+
+        # Standard proxy headers for host and client IP forwarding
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering and caching so SSE / Streamable HTTP chunks stream immediately
+        proxy_buffering off;
+        proxy_cache off;
+
+        # Extended timeouts (1 hour) to support long-lived MCP streaming sessions
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # Public Health Check Endpoint for monitors & container orchestration
+    location /health {
+        proxy_pass http://127.0.0.1:3000/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
