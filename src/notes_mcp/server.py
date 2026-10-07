@@ -10,9 +10,6 @@ from mcp.server.mcpserver import MCPServer
 
 from notes_mcp import db
 
-# Alias MCPServer as FastMCP for compatibility
-FastMCP = MCPServer
-
 
 @contextmanager
 def db_session(db_path: str | Path) -> Generator[sqlite3.Connection, None, None]:
@@ -69,11 +66,11 @@ def validate_tags(tags: list[str] | None) -> str | None:
     return None
 
 
-def create_mcp(db_path: str | Path) -> FastMCP:
-    """Create and configure the FastMCP server with tools, resources, and prompts."""
+def create_mcp(db_path: str | Path) -> MCPServer:
+    """Create and configure the MCPServer instance with tools, resources, and prompts."""
     db.init_db(db_path)
 
-    mcp = FastMCP(
+    mcp = MCPServer(
         name="notes",
         instructions=(
             "Personal notes server storing notes in SQLite. "

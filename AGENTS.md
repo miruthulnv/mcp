@@ -12,7 +12,7 @@ to AI clients (e.g. Claude Desktop, Cursor) over Streamable HTTP at `/mcp`.
 │   ├── auth.py            # Constant-time Bearer token ASGI middleware
 │   ├── config.py          # Environment settings with defaults & validation
 │   ├── db.py              # Parameterized SQLite3 queries & tag management
-│   ├── server.py          # FastMCP / MCPServer tools, resource, and prompt
+│   ├── server.py          # MCPServer tools, resource, and prompt
 │   └── main.py            # ASGI app assembly (/health + /mcp) and CLI runner
 ├── tests/                 # Pytest test suite covering auth, config, db, and tools
 ├── Dockerfile             # Multi-stage non-root container image
@@ -49,5 +49,5 @@ Launch Inspector:
 Connect using transport **Streamable HTTP**, URL `http://localhost:3000/mcp`, and header `Authorization: Bearer my-token`.
 
 ## API Deviations from Plan
-- **FastMCP in `mcp` 2.x**: In `mcp>=2.0`, `FastMCP` was renamed to `MCPServer` (`from mcp.server.mcpserver import MCPServer`). We aliased `FastMCP = MCPServer` for backward compatibility.
+- **MCPServer in `mcp` 2.x**: In `mcp>=2.0`, `FastMCP` was replaced by `MCPServer` (`from mcp.server.mcpserver import MCPServer`). The codebase uses `MCPServer` directly.
 - **Prompt string arguments**: MCP JSON-RPC protocol specification expects string values for prompt parameters (`arguments={"days": "7"}`).
