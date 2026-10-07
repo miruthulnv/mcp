@@ -172,9 +172,7 @@ async def test_input_validation(mcp_server) -> None:
 
 async def test_limit_clamping(mcp_server) -> None:
     for i in range(55):
-        await call_tool_single(
-            mcp_server, "add_note", {"title": f"Note {i}", "content": "Content"}
-        )
+        await call_tool_single(mcp_server, "add_note", {"title": f"Note {i}", "content": "Content"})
 
     # Limit <= 0 is clamped to 1
     min_res = await call_tool_multi(mcp_server, "list_recent_notes", {"limit": 0})
